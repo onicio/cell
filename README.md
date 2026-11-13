@@ -1,6 +1,6 @@
 # Cell Explorer 3D
 
-Cell Explorer 3D is an interactive website about the cell, made for grade 9 biology (Unit 2). Students turn a 3D cell with the mouse or a finger, click on each organelle to learn what it does, read short lessons and answer a quiz.
+Cell Explorer 3D is an interactive website about the cell, made for grade 9 biology (Unit 2). Students turn a 3D cell with the mouse or a finger, click or tap on each organelle to learn what it does, read short lessons and answer a quiz.
 
 The whole site is one file, `cell-explorer.html`. It needs no installation, no build step and no server code. The 3D library and the fonts are inside the file, so the page loads nothing from other servers and also works offline.
 
@@ -9,11 +9,14 @@ The whole site is one file, `cell-explorer.html`. It needs no installation, no b
 ### Explore in 3D
 
 - Three models: an animal cell, a plant cell and a bacterium.
-- Drag to turn the cell, scroll or pinch to zoom, click a part to open its card.
+- Drag to turn the cell, scroll or pinch to zoom, click or tap a part to open its card.
+- To move the view, hold `Shift` and drag, or drag with the right mouse button. On a touch screen, drag with two fingers. The **Reset view** button brings back the whole cell.
+- A cell with a wall has more than one boundary layer. Click the edge of the cell again to go to the next layer: in the plant cell from the cell wall to the plasma membrane, in the bacterium from the capsule to the cell wall and then to the plasma membrane.
+- The small and thin parts, such as the ribosomes, the vesicles, the cytoskeleton and the pili, have a click area that is bigger than their drawing. This makes them easier to hit with a finger.
 - Each card gives the name and how to say it, the membrane type, the job of the part, a short explanation, an everyday comparison, a few key facts and where to find the part in the model.
 - A filter sorts the parts by membrane: double membrane, single membrane or no membrane.
 - **Follow a protein** is a tour in 7 steps, from the DNA in the nucleus to exocytosis at the plasma membrane.
-- **Find it** is a game. It shows a clue and the student clicks the right part. A round has up to 8 clues, with two tries for each clue. Only an answer on the first try scores a point.
+- **Find it** is a game. It shows a clue and the student clicks the right part, in the model or in the parts list. A round has up to 8 clues, with two tries for each clue. Only an answer on the first try scores a point. For a very small part, such as the ribosomes, a near miss counts. For a boundary layer, such as the plasma membrane, a click on the edge of the cell counts.
 - Three buttons turn on and off the slow spin, the labels and the focus mode. With the focus mode on, the other parts fade when one part is selected.
 - A scale bar shows the real size, in µm or nm, and changes with the zoom.
 
@@ -77,12 +80,24 @@ Add `#lessons` or `#quiz` to the address to open that section directly. For exam
 
 Download `cell-explorer.html` and open it with a double click. The page works from the disk, and the quiz answers are still saved.
 
+## On a phone or tablet
+
+On a small screen the 3D view fills the whole screen, and the panels fold away to leave room for the cell.
+
+- A short bar at the bottom shows the name of the selected part. Tap the bar, or swipe it up, to open the panel with the details and the parts list. Tap **Close**, or swipe the top of the panel down, to fold it again.
+- A part chosen from the parts list folds the panel, so the part can be seen in the model.
+- When the phone is held sideways, the cell is on the left and the panel is on the right.
+- One finger turns the cell, a pinch zooms, two fingers move the view and a tap selects a part.
+- The **Whole cell** button goes back from a selected part to the whole cell. After a zoom or a move, the same button is named **Reset view**.
+- The labels start turned off. When they are on, a drag or a pinch can also start on a label.
+- The width of the window decides the layout, not the kind of device. A computer window that is narrower than 1080 px gets the same layout.
+
 ## Browsers and devices
 
 - The 3D view needs a browser with WebGL. Current versions of Chrome, Edge, Firefox and Safari have it.
-- The page was tested in Chrome, at computer and phone screen sizes: every part of the three cells, the tour, the game, the lesson figures, the quiz checks and the saving of answers. Other browsers were not tested yet.
+- The page was tested in Chrome, at computer, tablet and phone screen sizes: every part of the three cells, the tour, the game, the lesson figures, the quiz checks and the saving of answers. The touch gestures were tested with the touch input that Chrome can simulate. The page was not tested on a real phone or tablet yet, and not in other browsers.
 - If WebGL is not available, a message takes the place of the 3D view. The parts list, the cards, the tour, the lessons and the quiz still work.
-- On small screens the 3D view stays on top and the panels move below it. The labels start turned off there.
+- On a screen with many pixels the 3D view is drawn at up to twice the normal resolution. If the device then draws it slowly, under about 22 pictures per second, the page lowers the resolution in steps. The picture gets a little softer and the movement gets smoother.
 - The page follows the light or dark setting of the device.
 - If the device is set to reduce motion, the slow spin is off and the camera moves without animation.
 - Keyboard: when the 3D view has the focus, the arrow keys turn the cell, `+` and `-` zoom, and `Esc` goes back to the whole cell.
