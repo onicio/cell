@@ -31,8 +31,8 @@ img{max-width:100%}
 <style>
 /* Layout: a microscope stage. The 3D cell fills the screen and glass panels float over it:
    organelle index on the left, specimen card on the right, tools docked at the bottom.
-   Lessons and Quiz are glass pages over the same stage. On small screens the stage stays
-   on top and the panels turn into a tabbed sheet. */
+   Lessons and Quiz are glass pages over the same stage. On small screens the stage still fills
+   the screen and the two panels become one panel that folds down to a short bar at the bottom. */
 :root{
   --bg-a:#e8f5f6; --bg-b:#e7e8fb;
   --blob-1:rgba(72,200,214,.50); --blob-2:rgba(150,134,255,.36); --blob-3:rgba(255,168,120,.36);
@@ -82,9 +82,10 @@ img{max-width:100%}
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-html,body{height:100%}
+html{-webkit-text-size-adjust:100%; text-size-adjust:100%}
+html,body{height:100%; overscroll-behavior:none}
 body{
-  margin:0; overflow:hidden; color:var(--ink);
+  margin:0; overflow:hidden; color:var(--ink); -webkit-tap-highlight-color:transparent;
   font:400 15px/1.55 var(--f-body); -webkit-font-smoothing:antialiased;
   background:
     radial-gradient(60% 50% at 16% 18%, var(--blob-1), transparent 70%),
@@ -92,7 +93,7 @@ body{
     radial-gradient(56% 50% at 58% 98%, var(--blob-3), transparent 70%),
     linear-gradient(160deg, var(--bg-a), var(--bg-b));
 }
-button{font:inherit; color:inherit; cursor:pointer; border:0; background:none; padding:0}
+button{font:inherit; color:inherit; cursor:pointer; border:0; background:none; padding:0; touch-action:manipulation}
 h1,h2,h3,h4,p{margin:0}
 :focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 
@@ -104,11 +105,16 @@ h1,h2,h3,h4,p{margin:0}
   grid-template-columns:minmax(250px,300px) minmax(0,1fr) minmax(300px,372px);
   grid-template-rows:auto minmax(0,1fr) auto;
 }
-.stage{position:absolute; inset:0; z-index:0}
+/* The stage also covers the safe areas of a phone (status bar, home indicator), so the cell is never cut off by a straight line there. */
+.stage{position:absolute; z-index:0; left:0; right:0; top:0; bottom:0; top:calc(-1 * env(safe-area-inset-top, 0px)); bottom:calc(-1 * env(safe-area-inset-bottom, 0px))}
 .stage canvas{display:block; width:100%; height:100%; touch-action:none; outline:none; cursor:grab}
 .stage canvas:active{cursor:grabbing}
 .stage.is-hot canvas{cursor:pointer}
-.topbar,.rail,.card,.bottom,.tabs,.page,.cellsw{position:relative; z-index:1; min-width:0}
+.topbar,.rail,.card,.bottom,.tabs,.page,.cellsw,.viewbtn,.hint{position:relative; z-index:1; min-width:0}
+.stage,.topbar,.cellsw,.dock,.peek,.sheet-bar,.viewbtn,.hint{-webkit-user-select:none; user-select:none; -webkit-touch-callout:none}
+.list,.card,.page{overscroll-behavior:contain}
+/* Two fingers that land on a control bar must not zoom the whole page by accident. The text panels keep the zoom of the browser. */
+.topbar,.cellsw,.dock,.hud,.viewbtn{touch-action:pan-x pan-y}
 .glass{
   background:var(--glass); border:1px solid var(--glass-line); border-radius:var(--r-lg);
   box-shadow:var(--shadow), inset 0 1px 0 var(--glass-hi);
@@ -144,7 +150,7 @@ h1,h2,h3,h4,p{margin:0}
 
 /* ---------- explore: rail, card, dock ---------- */
 .cellsw{grid-column:2; grid-row:2; align-self:start; justify-self:center; padding:4px; border-radius:999px; max-width:100%; display:flex; align-items:center; gap:4px}
-.cellsw .seg,.tabs .seg{background:none; border:0; padding:0}
+.cellsw .seg{background:none; border:0; padding:0}
 .rail{grid-column:1; grid-row:2/4; display:flex; flex-direction:column; min-height:0; overflow:hidden}
 .rail-head{padding:16px 16px 10px}
 .rail h2{font:700 19px/1.2 var(--f-display); margin:6px 0 10px}
@@ -184,11 +190,30 @@ h1,h2,h3,h4,p{margin:0}
 .labels{position:absolute; inset:0; pointer-events:none; overflow:hidden}
 .lab,.tip{position:absolute; left:0; top:0; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:500; white-space:nowrap;
   background:var(--glass-3); border:1px solid var(--glass-line); color:var(--ink); box-shadow:0 6px 16px -10px rgba(0,0,0,.5)}
-.lab{pointer-events:auto; cursor:pointer}
+.lab{pointer-events:auto; cursor:pointer; touch-action:none}
 .lab:hover{border-color:var(--accent)}
 .tip{pointer-events:none; z-index:2}
 .stage-msg{position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:24px; color:var(--ink-2)}
-.tabs{display:none}
+/* The panel wrapper has no box on wide screens. The small-screen rules below turn it into the bottom panel. */
+.sheet{display:contents}
+.peek,.sheet-bar,.hint,.xs{display:none}
+/* On wide screens the reset button sits under the line of the cell switch, so the two can never touch. */
+.viewbtn{display:none; grid-column:2; grid-row:2; align-self:start; justify-self:end; margin-top:58px; background:var(--glass-3); color:var(--ink); box-shadow:0 8px 20px -12px rgba(0,0,0,.5)}
+.viewbtn.is-on{display:inline-flex}
+.clue{margin:12px 6px 0; padding:10px 12px; border-radius:var(--r-sm); background:var(--accent-soft); color:var(--ink); font-size:13.5px}
+.clue b{display:block; font:500 11px/1.2 var(--f-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); margin-bottom:3px}
+.peek{align-items:center; gap:10px; padding:17px 10px 10px 14px; position:relative; touch-action:none}
+.peek::before,.sheet-bar::before{content:""; position:absolute; top:7px; left:50%; width:40px; height:4px; margin-left:-20px; border-radius:4px; background:var(--ink-3); opacity:.5}
+.peek-main{flex:1; min-width:0; display:grid; gap:2px; text-align:left}
+.peek-t{display:flex; align-items:center; gap:8px; min-width:0; font:700 17px/1.2 var(--f-display)}
+.peek-t b{font-weight:inherit; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.peek-s{font-size:13px; line-height:1.35; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sheet-bar{align-items:center; justify-content:space-between; gap:8px; padding:17px 10px 8px; position:relative; touch-action:none; border-bottom:1px solid var(--hair)}
+.hint{grid-column:1; grid-row:3; align-self:end; justify-self:center; margin:0 0 2px; padding:6px 12px; border-radius:999px; font-size:12.5px; font-weight:500; color:var(--ink-2);
+  background:var(--glass-3); border:1px solid var(--glass-line); pointer-events:none; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; transition:opacity .5s}
+.hint.is-off{opacity:0}
+@keyframes sheet-up{from{transform:translateY(calc(100% - 70px))}to{transform:none}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
 .app:not([data-view="explore"]) .labels,.app:not([data-view="explore"]) .tip{display:none}
 .app:not([data-view="explore"]) .stage{filter:blur(5px); opacity:.6}
 
@@ -262,23 +287,82 @@ textarea{min-height:66px; resize:vertical; display:block}
 .meter i{display:block; height:100%; width:0; background:var(--accent); transition:width .3s}
 .quiz-top{display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px}
 
-/* ---------- small screens ---------- */
+/* ---------- small screens ----------
+   The 3D stage fills the whole screen and the controls float over it.
+   Three blocks follow: rules for every small screen, then the bottom panel ("sheet") layout
+   for phones and tablets held upright, then the side layout for a phone held sideways. */
 @media (max-width:1079px){
-  .app{grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(0,1fr) auto minmax(0,42%); gap:10px; padding-block:10px}
+  :root{--blur:14px}
+  .app{grid-template-columns:minmax(0,1fr); gap:8px; padding-block:8px}
   .app[data-view="lessons"],.app[data-view="quiz"]{grid-template-rows:auto minmax(0,1fr)}
-  .stage{inset:0 0 36% 0}
-  .cellsw{grid-column:1; grid-row:2}
-  .bottom{grid-column:1; grid-row:2; align-self:end}
-  .tabs{display:flex; grid-column:1; grid-row:3; padding:4px; border-radius:999px; justify-self:center}
-  .rail,.card{grid-column:1; grid-row:4}
+  .topbar{padding:6px 8px 6px 14px; gap:8px 12px}
+  .brand p{display:none}
+  .brand-mark{width:30px; height:30px}
+  .brand h1{font-size:20px}
+  .seg{padding:3px}
+  .cellsw,.bottom,.viewbtn,.page{grid-column:1}
+  .viewbtn{margin-top:0}
+  .page{grid-row:2}
+  .sheet{display:flex; flex-direction:column; grid-column:1; position:relative; z-index:1; min-width:0; min-height:0; overflow:hidden}
+  .sheet > .rail,.sheet > .card{flex:1; min-height:0; background:none; border:0; border-radius:0; box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none}
   .app[data-tab="card"] .rail,.app[data-tab="rail"] .card{display:none}
-  .page{grid-column:1; grid-row:2}
+  .sheet-bar{display:flex}
+  .rail-head{padding:12px 14px 8px}
+  .rail-head .eyebrow{display:none}
+  .rail h2{margin:0 0 8px; font-size:17px}
+  .card{padding:14px 16px 18px}
+  .dock{gap:6px; padding:6px}
+  .dock .btn{padding:8px 12px; font-size:13.5px; min-height:40px}
+  .hud{padding:12px 14px}
+  .hud h3{font-size:16.5px}
+  .hud p{font-size:13.5px}
+  .scale{padding:0 10px 0 6px}
+  textarea,select,input[type=number],input[type=text]{font-size:16px}
+}
+/* The limits 540.02 and 559.98 leave no gap next to the side layout below when the browser reports a size with a fraction. */
+@media (max-width:1079px) and (min-height:540.02px), (max-width:559.98px){
+  .app{grid-template-rows:auto auto minmax(0,1fr) auto auto}
+  .cellsw{grid-row:2}
+  .viewbtn{grid-row:3}
+  .hint{display:block}
+  .bottom{grid-row:4}
+  .sheet{grid-row:5; justify-self:center; width:min(100%,620px)}
+  .peek{display:flex}
+  .stage-msg{place-items:start center; padding:calc(136px + env(safe-area-inset-top, 0px)) 24px 0}
+  .app[data-sheet="closed"] .sheet-bar,.app[data-sheet="closed"] .sheet > .rail,.app[data-sheet="closed"] .sheet > .card{display:none}
+  .app[data-sheet="closed"] .peek{animation:fade-in .2s}
+  .app[data-sheet="open"] .peek,.app[data-sheet="open"] .bottom,.app[data-sheet="open"] .hint{display:none}
+  .app[data-sheet="open"] .sheet{height:min(54vh,520px); height:min(54dvh,520px); animation:sheet-up .26s cubic-bezier(.2,.8,.2,1)}
+  .app[data-hud="1"] .dock,.app[data-hud="1"] .hint{display:none}
+}
+@media (max-width:1079px) and (max-height:540px) and (min-width:560px){
+  .app{grid-template-columns:minmax(0,1fr) clamp(320px,48%,360px); grid-template-rows:auto auto auto minmax(0,1fr) auto; gap:6px; padding-block:6px}
+  .topbar{grid-column:1/-1; padding:4px 6px 4px 12px}
+  .seg button{padding:6px 12px; font-size:13px}
+  .cellsw{grid-column:2; grid-row:2; justify-self:stretch; justify-content:space-between}
+  .viewbtn{grid-column:1; grid-row:2; justify-self:start}
+  .hint{display:block; grid-column:1; grid-row:5}
+  .bottom{display:contents}
+  .hud{grid-column:2; grid-row:3; width:auto; position:relative; z-index:1; min-width:0}
+  .sheet{grid-column:2; grid-row:4}
+  .dock{grid-column:2; grid-row:5; justify-self:center; position:relative; z-index:1; min-width:0}
+  .sheet-x,.sheet-bar::before,.rail h2{display:none}
+  .sheet-bar{padding:6px 8px}
+  .filters{flex-wrap:nowrap; overflow-x:auto}
+  .card h2{font-size:22px}
+  .lg{display:none}
+  .xs{display:inline}
+  .dock{gap:4px; padding:5px}
+  .dock .btn{padding:8px; font-size:13px; min-width:44px}
+  .page{grid-column:1/-1; grid-row:2/-1}
+  .stage-msg{right:auto; width:calc(100% - clamp(320px,48%,360px) - 22px); padding:64px 16px 16px}
+  .app[data-hud="1"] .cellsw,.app[data-hud="1"] .dock,.app[data-hud="1"] .hint{display:none}
 }
 @media (max-width:560px){
   body{font-size:14.5px}
-  .brand-mark,.brand p{display:none}
+  .brand-mark{display:none}
   .brand h1{font-size:19px}
-  .topbar{padding:8px 10px}
+  .topbar{padding:6px 8px 6px 12px}
   .seg button{padding:7px 11px; font-size:13px}
   .sec{padding:18px 16px}
   .sec h2{font-size:24px}
@@ -286,6 +370,35 @@ textarea{min-height:66px; resize:vertical; display:block}
   .q-b{margin-left:0}
   .rowq{grid-template-columns:minmax(0,1fr)}
   .lg{display:none}
+  .xs{display:inline}
+}
+@media (max-width:380px){
+  .topbar{padding:6px 6px 6px 10px; gap:8px}
+  .brand h1{font-size:16px}
+  #viewSwitch button{padding:7px 9px}
+  .dock{gap:5px; padding:5px}
+  .dock .btn{padding:8px 9px}
+}
+@media (max-width:340px){
+  .brand h1{display:none}
+  .brand-mark{display:block}
+  .dock{gap:4px; padding:4px}
+  .dock .btn{padding:8px 7px; font-size:13px}
+}
+/* A narrow computer window keeps the three columns, so the middle one is slim: short labels make the tool bar fit. */
+@media (min-width:1079.02px) and (max-width:1239px){
+  .lg{display:none}
+  .xs{display:inline}
+  .dock{gap:6px; padding:6px}
+  .dock .btn{padding:8px 10px}
+  .cellsw .seg button{padding:8px 12px}
+}
+/* Fingers need bigger targets than a mouse pointer. */
+@media (pointer:coarse){
+  .chip,.btn.sm{min-height:36px; padding:7px 13px}
+  .item{min-height:44px; padding:10px}
+  .seg button{min-height:36px}
+  .lab{padding:6px 11px; font-size:12.5px}
 }
 @media (prefers-reduced-motion:reduce){ *{transition:none!important; animation:none!important; scroll-behavior:auto!important} }
 .btn:disabled{opacity:.45; cursor:default}
@@ -297,9 +410,9 @@ textarea{min-height:66px; resize:vertical; display:block}
 </head>
 <body>
 <noscript><div style="position:fixed;inset:0;z-index:99;display:grid;place-items:center;padding:24px;text-align:center;background:var(--bg-a);color:var(--ink);font:500 17px/1.5 system-ui,sans-serif">Cell Explorer needs JavaScript. Turn it on in the browser settings and reload the page.</div></noscript>
-<div class="app" id="app" data-view="explore" data-tab="card">
+<div class="app" id="app" data-view="explore" data-tab="card" data-sheet="closed" data-hud="0">
   <div class="stage" id="stage">
-    <canvas id="gl" tabindex="0" aria-label="3D model of a cell. Drag to rotate, scroll to zoom, click a part to learn about it."></canvas>
+    <canvas id="gl" tabindex="0" aria-label="3D model of a cell. Drag to turn it, pinch or scroll to zoom, tap or click a part to learn about it."></canvas>
     <div class="labels" id="labels"></div>
     <div class="tip" id="tip" hidden></div>
     <div class="stage-msg" id="nogl" hidden><p>The 3D view needs WebGL and this browser did not start it.<br>You can still read every part in the list, the lessons and the quiz.</p></div>
@@ -326,7 +439,26 @@ textarea{min-height:66px; resize:vertical; display:block}
     <div class="scale" id="scale" title="Scale bar"><i></i><span>5 µm</span></div>
   </div>
 
-  <aside class="rail glass" id="rail" data-x="explore" aria-label="Parts of the cell">
+  <button class="viewbtn chip" id="viewBtn" data-act="home" data-x="explore">Reset view</button>
+  <p class="hint" id="hint" data-x="explore">Drag to turn · Pinch to zoom · Tap a part</p>
+
+  <!-- On wide screens this wrapper has no box and the two panels sit left and right.
+       On small screens it is one panel at the bottom that folds down to the short "peek" bar. -->
+  <div class="sheet glass" id="sheet" data-x="explore">
+    <div class="peek" id="peek" aria-live="polite">
+      <button class="peek-main" id="peekMain" data-sheet="card" aria-expanded="false"></button>
+      <button class="btn sm" data-sheet="rail" aria-expanded="false">Parts</button>
+    </div>
+    <div class="sheet-bar" id="sheetBar">
+      <nav class="tabs" id="tabs" aria-label="Panel">
+        <div class="seg">
+          <button data-tab="card" aria-selected="true">Details</button>
+          <button data-tab="rail" aria-selected="false">Parts list</button>
+        </div>
+      </nav>
+      <button class="btn sm sheet-x" data-sheet="close">Close</button>
+    </div>
+  <aside class="rail glass" id="rail" aria-label="Parts of the cell">
     <div class="rail-head">
       <p class="eyebrow">Parts of this cell</p>
       <h2>Sort by membrane</h2>
@@ -340,25 +472,19 @@ textarea{min-height:66px; resize:vertical; display:block}
     <div class="list" id="list"></div>
   </aside>
 
-  <section class="card glass" id="card" data-x="explore" aria-live="polite"></section>
+  <section class="card glass" id="card" aria-live="polite"></section>
+  </div>
 
   <div class="bottom" id="bottom" data-x="explore">
     <div class="hud glass" id="hud" hidden></div>
     <div class="dock glass" id="dock">
-      <button class="btn primary" data-act="tour">Follow a protein</button>
+      <button class="btn primary" data-act="tour"><span class="lg">Follow a protein</span><span class="xs">Tour</span></button>
       <button class="btn" data-act="find">Find it</button>
       <button class="btn" data-tog="spin" aria-pressed="true">Spin</button>
       <button class="btn" data-tog="labels" aria-pressed="true">Labels</button>
       <button class="btn" data-tog="focus" aria-pressed="true">Focus</button>
     </div>
   </div>
-
-  <nav class="tabs glass" id="tabs" data-x="explore" aria-label="Panel">
-    <div class="seg">
-      <button data-tab="card" aria-selected="true">Details</button>
-      <button data-tab="rail" aria-selected="false">Parts list</button>
-    </div>
-  </nav>
 
   <main class="page" id="pageLessons" data-x="lessons" hidden>
    <div class="page-in">
@@ -874,19 +1000,25 @@ function blobGeo(n, sx, sy, sz, bump, seg){
   }
   return g;
 }
-function tubeObj(pts, rad, mat, seg, rseg, closed){
+/* Touch targets: thin and tiny parts get a fatter invisible copy that is used only for picking. */
+const PX = T ? new T.MeshBasicMaterial({visible:false}) : null;
+function touchy(o){ o.userData.px = 1; o.visible = false; return o; }
+function fatBall(parent, pos, r){ return put(parent, touchy(new T.Mesh(new T.SphereGeometry(r, 10, 8), PX)), pos); }
+function tubeObj(pts, rad, mat, seg, rseg, closed, fat){
   const c = new T.CatmullRomCurve3(pts.map(p => new T.Vector3(p[0], p[1], p[2])), !!closed), g = new T.Group();
   g.add(new T.Mesh(new T.TubeGeometry(c, seg || 64, rad, rseg || 8, !!closed), mat));
   if (!closed) [pts[0], pts[pts.length - 1]].forEach(p => put(g, new T.Mesh(new T.SphereGeometry(rad, rseg || 8, 6), mat), p));
+  if (fat) g.add(touchy(new T.Mesh(new T.TubeGeometry(c, Math.max(8, Math.round((seg || 64) / 4)), fat, 5, !!closed), PX)));
   return g;
 }
-function dots(list, r, mat){
-  const im = new T.InstancedMesh(new T.SphereGeometry(r, 8, 6), mat, list.length), d = new T.Object3D();
+function dots(list, r, mat, lowPoly){
+  const im = new T.InstancedMesh(new T.SphereGeometry(r, lowPoly ? 6 : 8, lowPoly ? 4 : 6), mat, list.length), d = new T.Object3D();
   list.forEach((p, i) => { d.position.set(p[0], p[1], p[2]); d.updateMatrix(); im.setMatrixAt(i, d.matrix); });
   im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; return im;
 }
+function fatDots(list, r){ return touchy(dots(list, r, PX, true)); }
 function newModel(R){
-  const m = {root:new T.Group(), parts:{}, picks:[], ticks:[], R, tour:null};
+  const m = {root:new T.Group(), parts:{}, picks:[], prox:[], ticks:[], R, tour:null};
   m.P = (id, anchor, dist, o) => {
     let p = m.parts[id];
     if (!p){ p = m.parts[id] = Object.assign({id, g:new T.Group(), anchor:new T.Vector3(), dist:12, ghost:.06, vis:1, visT:1, glow:0, glowT:0, mats:[]}, o || {}); m.root.add(p.g); }
@@ -902,7 +1034,9 @@ function seal(m){
     const seen = new Set();
     p.g.traverse(o => {
       if (!o.isMesh) return;
-      o.userData.org = p.id; if (!p.nopick) m.picks.push(o);
+      o.userData.org = p.id;
+      if (o.userData.px){ if (!p.nopick) m.prox.push(o); return; }
+      if (!p.nopick) m.picks.push(o);
       const mt = o.material; if (seen.has(mt)) return; seen.add(mt);
       p.mats.push({m:mt, o:mt.opacity, t:mt.transparent, d:mt.depthWrite});
     });
@@ -921,6 +1055,7 @@ function addNucleus(m, c, r){
   const chrom = std(0xd9d2ff, {roughness:.7});
   for (let i = 0; i < 5; i++){ const pts = []; for (let j = 0; j < 6; j++){ const d = rdir(), k = r * .72 * Math.cbrt(rnd()); pts.push([d[0] * k, d[1] * k, d[2] * k]); } g.add(tubeObj(pts, r * .025, chrom, 60, 6)); }
   put(po.g, new T.Mesh(blobGeo(2, 1, 1, 1, .07, 24), std(0x4433b0, {roughness:.85})), [c[0] + r * .1, c[1], c[2] + r * .1], null, r * .36);
+  fatBall(po.g, [c[0] + r * .1, c[1], c[2] + r * .1], r * .55);
 }
 function addRER(m, c, s){
   const p = m.P('rer', [c[0] + Math.cos(2.8) * 2.5 * s, c[1] + .5 * s, c[2] + Math.sin(2.8) * 2.5 * s], 11 * s);
@@ -938,7 +1073,7 @@ function addRER(m, c, s){
 }
 function addSER(m, c, s){
   const p = m.P('ser', [c[0], c[1] + .7 * s, c[2]], 9 * s, {focus:c}), mat = std(0x35c2ae);
-  for (let i = 0; i < 7; i++){ const pts = []; for (let j = 0; j < 5; j++) pts.push([c[0] + rs(1.0 * s), c[1] + rs(.75 * s), c[2] + rs(.85 * s)]); p.g.add(tubeObj(pts, .085 * s, mat, 50, 8)); }
+  for (let i = 0; i < 7; i++){ const pts = []; for (let j = 0; j < 5; j++) pts.push([c[0] + rs(1.0 * s), c[1] + rs(.75 * s), c[2] + rs(.85 * s)]); p.g.add(tubeObj(pts, .085 * s, mat, 50, 8, false, Math.max(.13, .2 * s))); }
 }
 function addGolgi(m, c, rot, s){
   const p = m.P('golgi', [c[0], c[1] + .9 * s, c[2]], 9 * s, {focus:c}), g = put(p.g, new T.Group(), c, rot, s), mat = std(0xe56bb0);
@@ -991,21 +1126,22 @@ function buildAnimal(){
   addGolgi(m, [2.35, -1.0, 1.7], [.1, -.3, .45], 1);
   const ves = m.P('vesicles', [3.3, -.55, 2.3], 7.5), vm = std(0xf3a3cd, {transparent:true, opacity:.9});
   [[3.3, -.9, 2.3, .17], [3.75, -.5, 1.9, .14], [3.05, -.2, 2.8, .15], [1.45, -.55, 1.05, .15], [1.15, -.95, .55, .13], [4.0, -1.35, 1.6, .16], [2.5, -2.05, 2.2, .14]]
-    .forEach(v => put(ves.g, new T.Mesh(new T.SphereGeometry(v[3], 16, 12), vm), v));
+    .forEach(v => { put(ves.g, new T.Mesh(new T.SphereGeometry(v[3], 16, 12), vm), v); fatBall(ves.g, v, .3); });
   const mi = m.P('mito', [.6, -1.75, 1.9], 8, {focus:[.6, -2.7, 1.7]});
   const mo = std(0xff7a59, {side:T.DoubleSide}), mn = std(0xffb199, {side:T.DoubleSide}), mc = std(0xffe0d2);
   addList(mi, [[.6, -2.7, 1.7, 0, Math.PI, -1.25, 1], [-2.7, -2.3, 1.7, .4, 2.6, 1.1, .85], [3.5, 1.0, 1.3, .2, 3.6, .5, .8], [-.3, 3.3, 1.2, 0, 2.9, 1.5, .85], [1.3, 2.7, -2.6, .5, 1.0, .9, .8], [-3.3, 2.0, -2.0, .3, 5.0, 1.3, .8], [.2, -2.6, -2.9, 0, .4, 1.2, .85]], () => mito(mo, mn, mc));
   const ly = m.P('lyso', [-2.3, -.9, 3.05], 7.5, {focus:[-2.3, -1.3, 3.05]}), lm = std(0xc9dd4a, {roughness:.35});
-  [[-2.3, -1.3, 3.05, .27], [3.5, -1.7, -.5, .24], [.95, 1.55, 3.45, .25], [-1.0, -3.5, -1.1, .26], [-3.9, -.4, .9, .22]].forEach(v => put(ly.g, new T.Mesh(new T.SphereGeometry(v[3], 20, 14), lm), v));
+  [[-2.3, -1.3, 3.05, .27], [3.5, -1.7, -.5, .24], [.95, 1.55, 3.45, .25], [-1.0, -3.5, -1.1, .26], [-3.9, -.4, .9, .22]].forEach(v => { put(ly.g, new T.Mesh(new T.SphereGeometry(v[3], 20, 14), lm), v); fatBall(ly.g, v, .38); });
   const va = m.P('vacuole', [-3.0, 2.8, 1.6], 8, {focus:[-3.0, 2.2, 1.6]}), vam = std(0x7fbfff, {transparent:true, opacity:.6, roughness:.2});
   [[-3.0, 2.2, 1.6, .5], [2.0, -3.1, -1.3, .42]].forEach(v => put(va.g, new T.Mesh(new T.SphereGeometry(v[3], 24, 16), vam), v));
   const C = [.5, 1.7, 2.3], ce = m.P('centrioles', [C[0] + .25, C[1] + .55, C[2]], 6, {focus:C});
-  put(ce.g, centriolePair(std(0x3fcf9a)), C, [.3, .5, .2], 1.25);
+  const cp = centriolePair(std(0x3fcf9a)); fatBall(cp, [.3, -.05, 0], .6); put(ce.g, cp, C, [.3, .5, .2], 1.25);
   const ck = m.P('cyto', [-1.7, 2.5, 2.7], 0, {whole:true}), km = std(0x74e0b8);
-  for (let i = 0; i < 16; i++){ const d = rdir(), e = [d[0] * 5.0, d[1] * 4.45, d[2] * 4.7]; ck.g.add(tubeObj([C, [(C[0] + e[0]) / 2 + rs(.5), (C[1] + e[1]) / 2 + rs(.5), (C[2] + e[2]) / 2 + rs(.5)], e], .019, km, 24, 5)); }
+  for (let i = 0; i < 16; i++){ const d = rdir(), e = [d[0] * 5.0, d[1] * 4.45, d[2] * 4.7]; ck.g.add(tubeObj([C, [(C[0] + e[0]) / 2 + rs(.5), (C[1] + e[1]) / 2 + rs(.5), (C[2] + e[2]) / 2 + rs(.5)], e], .019, km, 24, 5, false, .13)); }
   const free = [];
   while (free.length < 170){ const d = rdir(), k = 4.3 * Math.cbrt(rnd()), q = [d[0] * k * 1.05, d[1] * k * .94, d[2] * k]; if (Math.hypot(q[0] - N[0], q[1] - N[1], q[2] - N[2]) > 1.75) free.push(q); }
-  m.P('ribosomes', [.8, .8, .65], 6.5).g.add(dots(bound.concat(free), .05, std(0xf2b632, {roughness:.4})));
+  const rib = m.P('ribosomes', [.8, .8, .65], 6.5, {speck:true}), ribs = bound.concat(free);
+  rib.g.add(dots(ribs, .05, std(0xf2b632, {roughness:.4}))); rib.g.add(fatDots(ribs, .12));
   m.tour = [N, [.78, .35, .6], [1.83, .35, .33], [1.45, -.55, 1.05], [2.35, -1.0, 1.7], [4.14, -1.14, 2.9]];
   m.bead = put(m.root, new T.Mesh(new T.SphereGeometry(.17, 16, 12), new T.MeshBasicMaterial({color:0xff4d00})), N); m.bead.visible = false;
   m.home = [.55, 1.2]; m.center = [0, 0, 0];
@@ -1027,7 +1163,7 @@ function buildPlant(){
   addSER(m, [-3.9, 2.1, -.9], .5);
   addGolgi(m, [-1.2, -2.2, 2.5], [.1, -.2, 1.0], .6);
   const ves = m.P('vesicles', [-.6, -2.3, 2.7], 5), vm = std(0xf3a3cd, {transparent:true, opacity:.9});
-  [[-.6, -2.5, 2.7, .1], [-1.7, -1.75, 2.85, .09], [-.75, -1.75, 2.9, .1], [-2.0, -2.6, 2.3, .09]].forEach(v => put(ves.g, new T.Mesh(new T.SphereGeometry(v[3], 16, 12), vm), v));
+  [[-.6, -2.5, 2.7, .1], [-1.7, -1.75, 2.85, .09], [-.75, -1.75, 2.9, .1], [-2.0, -2.6, 2.3, .09]].forEach(v => { put(ves.g, new T.Mesh(new T.SphereGeometry(v[3], 16, 12), vm), v); fatBall(ves.g, v, .22); });
   const mi = m.P('mito', [.3, -.75, 3.05], 6, {focus:[.3, -1.25, 3.05]});
   const mo = std(0xff7a59, {side:T.DoubleSide}), mn = std(0xffb199, {side:T.DoubleSide}), mc = std(0xffe0d2);
   addList(mi, [[.3, -1.25, 3.05, 0, 3.1, 1.45, .55], [-4.3, -1.7, 1.5, .3, 2.9, 1.2, .55], [3.3, 3.0, -.7, .4, .8, 1.3, .55], [-1.9, 3.05, -1.5, .2, 4.2, 1.1, .55]], () => mito(mo, mn, mc));
@@ -1038,7 +1174,7 @@ function buildPlant(){
     [.5, 2.2, -3.0, HP, 0, 1.0, .95], [3.4, -.6, -2.9, HP, 0, 4.0, .9], [-1.2, -2.4, -2.6, HP, 0, 5.5, .9], [-4.0, -2.5, -.8, 0, 1.0, HP, .85]], () => chloro(co, ci, cd));
   const sup = (d, a, b, c, n) => { const k = Math.pow(Math.pow(Math.abs(d[0] / a), n) + Math.pow(Math.abs(d[1] / b), n) + Math.pow(Math.abs(d[2] / c), n), -1 / n); return [d[0] * k, d[1] * k, d[2] * k]; };
   const ck = m.P('cyto', [3.6, -3.45, 2.2], 0, {whole:true}), km = std(0x74e0b8);
-  for (let i = 0; i < 16; i++){ const a = rdir(), b = rdir(), pts = []; for (let j = 0; j <= 6; j++){ const t = j / 6 * .45; pts.push(sup([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t], 5.2, 3.75, 3.45, 6)); } ck.g.add(tubeObj(pts, .02, km, 40, 5)); }
+  for (let i = 0; i < 16; i++){ const a = rdir(), b = rdir(), pts = []; for (let j = 0; j <= 6; j++){ const t = j / 6 * .45; pts.push(sup([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t], 5.2, 3.75, 3.45, 6)); } ck.g.add(tubeObj(pts, .02, km, 40, 5, false, .13)); }
   const free = []; let guard = 0;
   while (free.length < 200 && guard++ < 9000){
     const q = [rs(5.1), rs(3.7), rs(3.4)];
@@ -1046,7 +1182,8 @@ function buildPlant(){
     const inV = Math.pow(Math.abs((q[0] - V[0]) / 3.05), 3) + Math.pow(Math.abs((q[1] - V[1]) / 2.63), 3) + Math.pow(Math.abs((q[2] - V[2]) / 2.42), 3) < 1;
     if (inM && !inV && Math.hypot(q[0] - N[0], q[1] - N[1], q[2] - N[2]) > 1.2) free.push(q);
   }
-  m.P('ribosomes', [-2.2, .8, 1.4], 5).g.add(dots(bound.concat(free), .04, std(0xf2b632, {roughness:.4})));
+  const rib = m.P('ribosomes', [-2.2, .8, 1.4], 5, {speck:true}), ribs = bound.concat(free);
+  rib.g.add(dots(ribs, .04, std(0xf2b632, {roughness:.4}))); rib.g.add(fatDots(ribs, .11));
   m.home = [.5, 1.2]; m.center = [0, 0, 0];
   return seal(m);
 }
@@ -1058,42 +1195,48 @@ function capsuleGeo(r, half){
 }
 function buildBacteria(){
   seed = 5; const m = newModel(7.5), X = 2.2, H = 2.3, RZ = [0, 0, Math.PI / 2];
-  const layer = (id, r, mat, anchor, ghost) => { const p = m.P(id, anchor, 0, {shell:true, whole:true, ghost}); put(p.g, new T.Mesh(capsuleGeo(r, H), mat), [X, 0, 0], RZ); };
+  const layer = (id, r, mat, anchor, ghost, opaque) => { const p = m.P(id, anchor, 0, {shell:true, whole:true, ghost, opaque:!!opaque}); put(p.g, new T.Mesh(capsuleGeo(r, H), mat), [X, 0, 0], RZ); };
   layer('capsule', 1.8, rim(0x7fa84a, 0xcfe8a9, .12, .5, 1.8), [X + 2.0, 0, 1.8], .35);
-  layer('wall', 1.62, std(0xd2a05a, {side:T.DoubleSide, roughness:.7}), [X + .6, 0, 1.62], .1);
-  layer('membrane', 1.5, std(0x3fb9d6, {side:T.DoubleSide, roughness:.6}), [X - .8, 0, 1.5], .1);
+  layer('wall', 1.62, std(0xd2a05a, {side:T.DoubleSide, roughness:.7}), [X + .6, 0, 1.62], .1, true);
+  layer('membrane', 1.5, std(0x3fb9d6, {side:T.DoubleSide, roughness:.6}), [X - .8, 0, 1.5], .1, true);
   const cy = m.P('cytoplasm', [X, 0, 0], 0, {nopick:true, whole:true, ghost:1, selGlow:1.2});
   put(cy.g, new T.Mesh(capsuleGeo(1.42, H), rim(0x5fb7cc, 0x9fd8e6, 0, 0, 2)), [X, 0, 0], RZ);
   const nu = m.P('nucleoid', [X - .2, .8, .5], 7.5, {focus:[X, 0, 0]}), npts = [];
   for (let i = 0; i < 26; i++) npts.push([X + rs(1.7), rs(.62), rs(.62)]);
-  nu.g.add(tubeObj(npts, .075, std(0xa99cff), 420, 7, true));
+  nu.g.add(tubeObj(npts, .075, std(0xa99cff), 420, 7, true, .2));
   const pl = m.P('plasmid', [X + 2.5, .85, .7], 5, {focus:[X + 2.5, .45, .7]}), pm = std(0xff8fab);
-  [[X + 2.5, .45, .7, .5, .3, 0], [X - 2.4, -.35, .85, 1.2, 0, .4], [X + 2.2, -.75, -.5, .2, 1, 1]].forEach(v => put(pl.g, new T.Mesh(new T.TorusGeometry(.22, .04, 8, 28), pm), v, [v[3], v[4], v[5]]));
+  [[X + 2.5, .45, .7, .5, .3, 0], [X - 2.4, -.35, .85, 1.2, 0, .4], [X + 2.2, -.75, -.5, .2, 1, 1]].forEach(v => { put(pl.g, new T.Mesh(new T.TorusGeometry(.22, .04, 8, 28), pm), v, [v[3], v[4], v[5]]); fatBall(pl.g, v, .34); });
   const rb = [];
   while (rb.length < 210){ const q = [rs(H + 1.3), rs(1.3), rs(1.3)], dx = Math.max(0, Math.abs(q[0]) - H); if (Math.hypot(dx, q[1], q[2]) < 1.3) rb.push([X + q[0], q[1], q[2]]); }
-  m.P('ribosomes', [X + 1.2, .3, 1.25], 5.5).g.add(dots(rb, .045, std(0xf2b632, {roughness:.4})));
+  const rib = m.P('ribosomes', [X + 1.2, .3, 1.25], 5.5, {speck:true});
+  rib.g.add(dots(rb, .045, std(0xf2b632, {roughness:.4}))); rib.g.add(fatDots(rb, .11));
   const fl = m.P('flagellum', [X - H - 4.4, .8, 0], 0, {whole:true}), fp = [];
   for (let i = 0; i <= 30; i++){ const amp = .5 * (1 - Math.exp(-i / 4)); fp.push([-i * .2, amp * Math.cos(i * .55), amp * Math.sin(i * .55)]); }
-  const fg = put(fl.g, tubeObj(fp, .07, std(0xd9b77a), 220, 7), [X - H - 1.75, 0, 0]);
+  const fg = put(fl.g, tubeObj(fp, .07, std(0xd9b77a), 220, 7, false, .26), [X - H - 1.75, 0, 0]);
   m.ticks.push((t, dt) => { fg.rotation.x -= dt * 5; });
   const pi = m.P('pili', [X + 1.0, -2.0, .9], 0, {whole:true});
-  const pim = new T.InstancedMesh(new T.CylinderGeometry(.018, .018, .75, 5), std(0xe3c690), 54), d = new T.Object3D(), up = new T.Vector3(0, 1, 0), nv = new T.Vector3();
+  const pim = new T.InstancedMesh(new T.CylinderGeometry(.018, .018, .75, 5), std(0xe3c690), 54), pix = touchy(new T.InstancedMesh(new T.CylinderGeometry(.1, .1, .75, 5), PX, 54)), d = new T.Object3D(), up = new T.Vector3(0, 1, 0), nv = new T.Vector3();
   let n = 0;
   while (n < 54){
     const x = rs(H + 1.2), a = rnd() * Math.PI * 2; let nx = 0, ny = Math.cos(a), nz = Math.sin(a), cx = x;
     if (ny > 0 && nz > 0) continue;
     if (Math.abs(x) > H){ const t = (Math.abs(x) - H) / 1.2 * 1.4; nx = Math.sign(x) * Math.sin(t); ny *= Math.cos(t); nz *= Math.cos(t); cx = Math.sign(x) * H; }
-    nv.set(nx, ny, nz).normalize(); d.position.set(X + cx + nv.x * 1.95, nv.y * 1.95, nv.z * 1.95); d.quaternion.setFromUnitVectors(up, nv); d.updateMatrix(); pim.setMatrixAt(n++, d.matrix);
+    nv.set(nx, ny, nz).normalize(); d.position.set(X + cx + nv.x * 1.95, nv.y * 1.95, nv.z * 1.95); d.quaternion.setFromUnitVectors(up, nv); d.updateMatrix(); pim.setMatrixAt(n, d.matrix); pix.setMatrixAt(n++, d.matrix);
   }
   pim.instanceMatrix.needsUpdate = true; pim.frustumCulled = false; pi.g.add(pim);
-  m.home = [.35, 1.12]; m.center = [-.8, 0, 0];
+  pix.instanceMatrix.needsUpdate = true; pix.frustumCulled = false; pi.g.add(pix);
+  m.home = [.35, 1.12]; m.center = [-.8, 0, 0]; m.ext = [7.5, 2.7];
   return seal(m);
 }
 const BUILD = {animal:buildAnimal, plant:buildPlant, bacteria:buildBacteria};
 
 /* ================= 3D: runtime ================= */
-const S = {view:'explore', cell:'animal', sel:null, hover:null, filter:'all', spin:true, labels:true, focus:true, tour:-1, find:null};
-const G = {ok:false, model:null, cache:{}, last:0, running:false, idleAt:0, fit:1, free:{cx:0, cy:0, w:1, h:1}, w:1, h:1, hoverXY:null};
+const S = {view:'explore', cell:'animal', sel:null, hover:null, filter:'all', spin:true, labels:true, focus:true, tour:-1, find:null, sheet:false};
+const G = {ok:false, model:null, cache:{}, last:0, running:false, idleAt:0, fit:1, free:{cx:0, cy:0, w:1, h:1}, off:{x:0, y:0}, w:0, h:0, hoverXY:null, mode:'', pr:1, fT:0, fN:0, slowAt:0};
+/* Three layouts: 'wide' (panels left and right), 'sheet' (phone or tablet, panel folds at the bottom), 'side' (phone held sideways). */
+const MQ = q => (window.matchMedia ? window.matchMedia(q) : {matches:false});
+const mqCompact = MQ('(max-width:1079px)'), mqSide = MQ('(max-width:1079px) and (max-height:540px) and (min-width:560px)'), TOUCH = MQ('(pointer:coarse)').matches;
+function mode(){ return !mqCompact.matches ? 'wide' : (mqSide.matches ? 'side' : 'sheet'); }
 const view = {th:.55, ph:1.2, r:18, x:0, y:0, z:0}, goal = Object.assign({}, view);
 const stageEl = $('#stage'), canvas = $('#gl'), labelsEl = $('#labels'), tipEl = $('#tip');
 const scaleBar = $('#scale i'), scaleTxt = $('#scale span');
@@ -1103,8 +1246,9 @@ let renderer, scene, camera, ray, ndc, v3, labs = [];
 
 function initGL(){
   if (!T) return false;
-  try { renderer = new T.WebGLRenderer({canvas, antialias:true, alpha:true}); } catch (e){ return false; }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const dense = mqCompact.matches && (window.devicePixelRatio || 1) >= 2;
+  try { renderer = new T.WebGLRenderer({canvas, antialias:!dense, alpha:true}); } catch (e){ return false; }
+  G.pr = Math.min(window.devicePixelRatio || 1, 2); renderer.setPixelRatio(G.pr);
   renderer.setClearColor(0x000000, 0);
   scene = new T.Scene(); camera = new T.PerspectiveCamera(36, 1, .1, 400); scene.add(camera);
   scene.add(new T.HemisphereLight(0xffffff, 0x4a5a78, .85));
@@ -1116,29 +1260,39 @@ function initGL(){
 function isDark(){ const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); }
 function applyTheme(){ const d = isDark(); rims.forEach(r => r.m.uniforms.uC.value.set(d ? r.d : r.l)); }
 
+function applyOffset(){ camera.setViewOffset(G.w, G.h, G.w / 2 - G.off.x, G.h / 2 - G.off.y, G.w, G.h); camera.updateProjectionMatrix(); }
+/* Finds the part of the stage that no panel covers and fits the cell into it.
+   Positions come from offsetTop and offsetLeft, which ignore the slide animation of the bottom panel. */
 function layout(){
+  const md = mode(); if (md !== G.mode){ G.mode = md; app.dataset.mode = md; }
   if (!G.ok) return;
-  const r = stageEl.getBoundingClientRect(), w = Math.max(1, r.width), h = Math.max(1, r.height);
-  renderer.setSize(w, h, false); camera.aspect = w / h; G.w = w; G.h = h;
-  let fx0 = 0, fx1 = w, fy0 = 0, fy1 = h;
+  const r = stageEl.getBoundingClientRect(), w = Math.max(1, r.width), h = Math.max(1, r.height), snap = w !== G.w || h !== G.h || !G.running;
+  if (w !== G.w || h !== G.h){ renderer.setSize(w, h, false); camera.aspect = w / h; G.w = w; G.h = h; }
+  /* On a phone with safe areas the stage is taller than the app box. oy is where the app box starts inside the stage, bot is where it ends. */
+  const oy = -stageEl.offsetTop, bot = oy + app.offsetHeight;
+  let fx0 = 0, fx1 = w, fy0 = oy, fy1 = bot;
   if (S.view === 'explore'){
-    const tb = $('.topbar').getBoundingClientRect(), sw = $('.cellsw').getBoundingClientRect(), bt = $('#bottom').getBoundingClientRect();
-    fy0 = (sw.height ? sw.bottom : tb.bottom) - r.top + 6;
-    fy1 = Math.min(h, (bt.height ? bt.top : r.bottom) - r.top - 6);
-    if (window.innerWidth >= 1080){ fx0 = $('#rail').getBoundingClientRect().right - r.left + 8; fx1 = $('#card').getBoundingClientRect().left - r.left - 8; }
+    const box = el => (el && el.offsetHeight ? el : null), topOf = el => oy + el.offsetTop, end = el => topOf(el) + el.offsetHeight;
+    const top = $('.topbar'), sw = box($('.cellsw')), bt = box($('#bottom')), sh = box(sheetEl);
+    if (md === 'wide'){ fy0 = end(sw || top) + 6; fy1 = (bt ? topOf(bt) : bot) - 6; fx0 = railEl.offsetLeft + railEl.offsetWidth + 8; fx1 = cardEl.offsetLeft - 8; }
+    else if (md === 'side'){ fy0 = end(top) + 6; fy1 = bot - 6; fx1 = (sh ? sh.offsetLeft : w) - 8; }
+    else { fy0 = end(sw || top) + 6; fy1 = ((bt || sh) ? topOf(bt || sh) : bot) - 6; }
   }
   const fw = Math.max(80, fx1 - fx0), fh = Math.max(80, fy1 - fy0);
   G.free = {cx:(fx0 + fx1) / 2, cy:(fy0 + fy1) / 2, w:fw, h:fh};
-  camera.setViewOffset(w, h, w / 2 - G.free.cx, h / 2 - G.free.cy, w, h);
-  camera.updateProjectionMatrix();
-  if (G.model){ const fit = G.model.R * h / (Math.tan(camera.fov * Math.PI / 360) * (window.innerWidth >= 1080 ? .9 : .98) * Math.min(fw, fh)), k = fit / G.fit; G.fit = fit; goal.r *= k; view.r *= k; }
+  if (snap){ G.off.x = G.free.cx; G.off.y = G.free.cy; applyOffset(); }
+  if (G.model){
+    /* ext is the half width and half height the model needs. Most models are round, the bacterium is long. */
+    const e = G.model.ext || [G.model.R, G.model.R], mg = md === 'wide' ? .9 : .96, ppu = Math.min(fw * mg / (2 * e[0]), fh * mg / (2 * e[1]));
+    const fit = h / (2 * Math.tan(camera.fov * Math.PI / 360) * ppu), k = fit / G.fit; G.fit = fit; goal.r *= k; if (snap) view.r *= k;
+  }
   if (!G.running && scene){ aim(); renderer.render(scene, camera); }
 }
 function showModel(id){
   if (!G.ok) return;
   if (G.model) scene.remove(G.model.root);
   const m = G.cache[id] || (G.cache[id] = BUILD[id]());
-  G.model = m; scene.add(m.root); m.pop = 0; applyTheme();
+  G.model = m; scene.add(m.root); m.pop = 0; applyTheme(); settle();
   Object.values(m.parts).forEach(p => { p.vis = p.visT = 1; p.glow = p.glowT = 0; });
   G.fit = 1; goal.r = view.r = 1; layout(); view.r = goal.r * 1.25;
   goal.th = m.home[0]; goal.ph = view.ph = m.home[1]; view.th = goal.th - .7;
@@ -1166,19 +1320,49 @@ function applyVis(){
     p.glowT = p.id === sel ? (p.selGlow || .3) : (p.id === S.hover ? .65 : 0);
   });
 }
-function pickAt(cx, cy){
+/* Which part is under a screen point.
+   1. The first solid part the ray meets wins.
+   2. If it meets none, the fat invisible copy of a thin or tiny part counts (ribosomes, cytoskeleton, pili).
+   3. If only boundary layers are there (capsule, wall, membrane), each new tap moves one layer inward.
+      This also works while Focus fades the other layers, and under a layer that is not see-through.
+   A layer that is not see-through hides the solid parts behind it.
+   In the game, "want" is the answer: a near miss on a tiny target counts, and for a boundary layer a tap on the edge of the cell is enough. */
+function pickAt(cx, cy, want){
   const m = G.model; if (!m) return null;
   const r = canvas.getBoundingClientRect();
   ndc.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hits = ray.intersectObjects(m.picks, false); let shell = null;
+  const peel = S.focus && S.sel && m.parts[S.sel] && m.parts[S.sel].shell;
+  const hits = ray.intersectObjects(m.picks, false), shells = []; let first = null, next = null, stop = Infinity, prox = null;
   for (let i = 0; i < hits.length; i++){
-    const p = m.parts[hits[i].object.userData.org];
+    const h = hits[i], p = m.parts[h.object.userData.org];
+    if (p.shell){
+      if (p.visT < .5 && !peel) continue;
+      /* The layers lie close together: one that sits just under an opaque layer still belongs to the stack. */
+      if (!first && shells.indexOf(p.id) < 0 && h.distance - stop < 1.2) shells.push(p.id);
+      if (p.opaque && h.distance < stop) stop = h.distance;
+      continue;
+    }
+    if (h.distance > stop) break;
     if (p.visT < .5) continue;
-    if (p.shell){ shell = shell || p.id; continue; }
-    return p.id;
+    if (!first){ first = {id:p.id, d:h.distance}; if (!want || p.id === want) break; }
+    else if (p.id !== first.id){ next = {id:p.id, d:h.distance}; break; }
   }
-  return shell;
+  const fat = (lim, only) => {
+    prox = prox || (m.prox.length ? ray.intersectObjects(m.prox, false) : []);
+    for (let i = 0; i < prox.length && prox[i].distance <= lim; i++){ const id = prox[i].object.userData.org; if (m.parts[id].visT >= .5 && (!only || id === only)) return id; }
+    return null;
+  };
+  if (want){
+    if (first && first.id === want) return want;
+    if (fat(first ? first.d + .25 : stop, want)) return want;
+    if (first && next && next.id === want && next.d - first.d < .45 && m.parts[first.id].speck) return want;
+    if (!first && shells.length && m.parts[want] && m.parts[want].shell) return want;
+  }
+  if (first) return first.id;
+  const near = fat(stop);
+  if (near) return near;
+  return shells.length ? shells[(shells.indexOf(S.sel) + 1) % shells.length] : null;
 }
 function setHover(id, x, y){
   if (id !== S.hover){ S.hover = id; stageEl.classList.toggle('is-hot', !!id); applyVis(); }
@@ -1186,33 +1370,62 @@ function setHover(id, x, y){
   else tipEl.hidden = true;
 }
 function zoom(k){ goal.r = Math.max(G.fit * .22, Math.min(G.fit * 1.5, goal.r * k)); }
+/* Slides the point the camera looks at, so the cell follows the fingers. */
+function pan(dx, dy){
+  const m = G.model; if (!m) return;
+  const k = 2 * view.r * Math.tan(camera.fov * Math.PI / 360) / G.h, c = m.center;
+  v3.setFromMatrixColumn(camera.matrixWorld, 0); goal.x -= v3.x * dx * k; goal.y -= v3.y * dx * k; goal.z -= v3.z * dx * k;
+  v3.setFromMatrixColumn(camera.matrixWorld, 1); goal.x += v3.x * dy * k; goal.y += v3.y * dy * k; goal.z += v3.z * dy * k;
+  const ox = goal.x - c[0], oy = goal.y - c[1], oz = goal.z - c[2], l = Math.hypot(ox, oy, oz), lim = m.R * .9;
+  if (l > lim){ goal.x = c[0] + ox * lim / l; goal.y = c[1] + oy * lim / l; goal.z = c[2] + oz * lim / l; }
+}
 
-let downAt = null, pinch = 0, moved = 0;
-canvas.addEventListener('pointerdown', e => {
+/* One finger or the mouse turns the cell. Two fingers zoom and move it. Shift + drag or a right drag moves it with a mouse.
+   The listeners are on the stage and not on the canvas, so a drag, a pinch or the wheel also works when it starts on a label.
+   A short tap on a label still selects the part of that label. */
+let downAt = null, pinch = 0, panC = null;
+stageEl.addEventListener('pointerdown', e => {
+  const lab = e.target.closest('.lab');
+  if (S.view !== 'explore' || (e.target !== canvas && !lab)) return;
+  /* A first finger or a mouse button going down means nothing else is held. This clears a pointer whose end the browser never reported. */
+  if (e.isPrimary) ptr.clear();
   try { canvas.setPointerCapture(e.pointerId); } catch (err){}
   ptr.set(e.pointerId, {x:e.clientX, y:e.clientY});
-  if (ptr.size === 1){ downAt = {t:performance.now()}; moved = 0; }
-  else { const a = Array.from(ptr.values()); pinch = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); downAt = null; }
-  G.idleAt = performance.now(); tipEl.hidden = true;
+  if (ptr.size === 1) downAt = {t:performance.now(), x:e.clientX, y:e.clientY, lab:lab ? lab.dataset.org : null};
+  else { const a = Array.from(ptr.values()); pinch = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); panC = [(a[0].x + a[1].x) / 2, (a[0].y + a[1].y) / 2]; downAt = null; }
+  G.idleAt = performance.now(); tipEl.hidden = true; hideHint();
 });
-canvas.addEventListener('pointermove', e => {
+stageEl.addEventListener('pointermove', e => {
   const p = ptr.get(e.pointerId);
-  if (!p){ if (e.pointerType === 'mouse') G.hoverXY = [e.clientX, e.clientY]; return; }
+  if (!p){ if (e.pointerType === 'mouse') G.hoverXY = e.target === canvas ? [e.clientX, e.clientY] : null; return; }
   const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
-  if (ptr.size === 1){ moved += Math.abs(dx) + Math.abs(dy); goal.th -= dx * .0065; goal.ph = Math.max(.2, Math.min(Math.PI - .2, goal.ph - dy * .0065)); }
-  else if (ptr.size === 2){ const a = Array.from(ptr.values()), d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); if (pinch && d) zoom(pinch / d); pinch = d; }
+  if (ptr.size === 1){
+    if (e.pointerType === 'mouse' && (e.shiftKey || (e.buttons & 2))) pan(dx, dy);
+    else { goal.th -= dx * .0065; goal.ph = Math.max(.2, Math.min(Math.PI - .2, goal.ph - dy * .0065)); }
+  } else if (ptr.size === 2){
+    const a = Array.from(ptr.values()), d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y), cx = (a[0].x + a[1].x) / 2, cy = (a[0].y + a[1].y) / 2;
+    if (pinch && d) zoom(pinch / d);
+    if (panC) pan(cx - panC[0], cy - panC[1]);
+    pinch = d; panC = [cx, cy];
+  }
   G.idleAt = performance.now();
 });
 function pointerEnd(e){
   if (!ptr.has(e.pointerId)) return;
   ptr.delete(e.pointerId);
-  if (e.type === 'pointerup' && downAt && moved < 8 && performance.now() - downAt.t < 700) onPick(pickAt(e.clientX, e.clientY));
-  downAt = null; pinch = 0;
+  /* A tap: the pointer ended close to where it started, soon after. A finger gets more slack than a mouse. */
+  if (e.type === 'pointerup' && e.button === 0 && downAt && performance.now() - downAt.t < 700 && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < (e.pointerType === 'mouse' ? 6 : 12)){
+    if (downAt.lab){ G.labAt = performance.now(); onPick(downAt.lab); }
+    else onPick(pickAt(e.clientX, e.clientY, finding() ? S.find.ids[S.find.i] : null));
+  }
+  downAt = null; pinch = 0; panC = null;
 }
-canvas.addEventListener('pointerup', pointerEnd);
-canvas.addEventListener('pointercancel', pointerEnd);
+stageEl.addEventListener('pointerup', pointerEnd);
+stageEl.addEventListener('pointercancel', pointerEnd);
+window.addEventListener('blur', () => { ptr.clear(); downAt = null; pinch = 0; panC = null; });
+stageEl.addEventListener('contextmenu', e => { if (e.target === canvas || e.target.closest('.lab')) e.preventDefault(); });
 canvas.addEventListener('pointerleave', () => { G.hoverXY = null; setHover(null); });
-canvas.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .0012)); G.idleAt = performance.now(); }, {passive:false});
+stageEl.addEventListener('wheel', e => { if (!G.ok || S.view !== 'explore') return; e.preventDefault(); zoom(Math.exp(e.deltaY * .0012)); G.idleAt = performance.now(); }, {passive:false});
 canvas.addEventListener('keydown', e => {
   const k = e.key;
   if (k === 'ArrowLeft') goal.th -= .15; else if (k === 'ArrowRight') goal.th += .15;
@@ -1224,7 +1437,8 @@ canvas.addEventListener('keydown', e => {
 const NICE = [.01, .02, .05, .1, .2, .5, 1, 2, 5, 10, 20, 50, 100];
 function updateScale(){
   const ppu = G.h / (2 * Math.tan(camera.fov * Math.PI / 360) * view.r), um = CELLS[S.cell].um; let best = NICE[0];
-  for (let i = 0; i < NICE.length; i++) if (NICE[i] / um * ppu <= 84) best = NICE[i];
+  const lim = G.mode === 'wide' && G.free.w >= 420 ? 84 : 56;
+  for (let i = 0; i < NICE.length; i++) if (NICE[i] / um * ppu <= lim) best = NICE[i];
   const px = Math.round(best / um * ppu);
   if (px !== G.sPx || best !== G.sV){ G.sPx = px; G.sV = best; scaleBar.style.width = px + 'px'; scaleTxt.textContent = best < 1 ? Math.round(best * 1000) + ' nm' : best + ' µm'; }
 }
@@ -1248,14 +1462,35 @@ function aim(){
   camera.position.set(view.x + view.r * sp * Math.sin(view.th), view.y + view.r * Math.cos(view.ph), view.z + view.r * sp * Math.cos(view.th));
   camera.lookAt(view.x, view.y, view.z);
 }
+/* A small button that brings back the whole cell. It shows after zooming or moving the view,
+   and also while a part is selected and the bottom panel is folded (the card with its own button is hidden then). */
+function updateViewBtn(){
+  const m = G.model; let show = false, label = 'Reset view';
+  if (m && S.view === 'explore' && S.tour < 0){
+    if (S.sel){ show = G.mode === 'sheet' && !S.sheet && !S.find; label = '‹ Whole cell'; }
+    else show = goal.r < G.fit * .93 || goal.r > G.fit * 1.07 || Math.hypot(goal.x - m.center[0], goal.y - m.center[1], goal.z - m.center[2]) > m.R * .05;
+  }
+  if (show !== G.vbShow || label !== G.vbLabel){ G.vbShow = show; G.vbLabel = label; viewBtn.classList.toggle('is-on', show); viewBtn.textContent = label; }
+}
+/* Slow device guard. The frame times are averaged over 40 frames, but not right after a model is built or the view comes back.
+   If the average stays above 45 ms the canvas is drawn with fewer pixels, which costs sharpness and gives back speed.
+   45 ms leaves alone the browsers that hold the page at 30 frames a second to save battery. */
+function settle(){ G.slowAt = performance.now() + 1500; G.fT = G.fN = 0; }
+function hideHint(){ if (!G.hinted){ G.hinted = true; hintEl.classList.add('is-off'); } }
 function frame(now){
   if (!G.running) return;
   requestAnimationFrame(frame);
-  const dt = Math.min(.05, Math.max(0, (now - G.last) / 1000)); G.last = now;
+  const ms = Math.max(0, now - G.last), dt = Math.min(.05, ms / 1000); G.last = now;
   const m = G.model; if (!m) return;
+  if (G.pr > 1 && now > G.slowAt){
+    G.fT += Math.min(250, ms);
+    if (++G.fN >= 40){ if (G.fT / G.fN > 45){ G.pr = Math.max(1, G.pr - .5); renderer.setPixelRatio(G.pr); } G.fT = G.fN = 0; }
+  }
   const k = reduce ? 1 : 1 - Math.exp(-dt * 6);
   if (S.spin && !reduce && !ptr.size && !S.sel && S.tour < 0 && now - G.idleAt > 1800) goal.th += dt * .1;
   for (const key in goal) view[key] += (goal[key] - view[key]) * k;
+  const ox = G.free.cx - G.off.x, oy = G.free.cy - G.off.y;
+  if (ox || oy){ if (Math.abs(ox) + Math.abs(oy) < .5){ G.off.x = G.free.cx; G.off.y = G.free.cy; } else { G.off.x += ox * k; G.off.y += oy * k; } applyOffset(); }
   aim();
   if (m.pop < 1){ m.pop = reduce ? 1 : Math.min(1, m.pop + dt * 2.2); m.root.scale.setScalar(.82 + .18 * (1 - Math.pow(1 - m.pop, 3))); }
   const pulse = .5 + .5 * Math.sin(now / 280);
@@ -1275,21 +1510,23 @@ function frame(now){
   }
   if (G.hoverXY && !ptr.size){ const xy = G.hoverXY, r = stageEl.getBoundingClientRect(); G.hoverXY = null; setHover(pickAt(xy[0], xy[1]), xy[0] - r.left, xy[1] - r.top); }
   renderer.render(scene, camera);
-  updateLabels(); updateScale();
+  updateLabels(); updateScale(); updateViewBtn();
 }
 function run(on){
-  if (on && G.ok && !G.running){ G.running = true; G.last = performance.now(); requestAnimationFrame(frame); }
+  if (on && G.ok && !G.running){ G.running = true; G.last = performance.now(); settle(); requestAnimationFrame(frame); }
   else if (!on) G.running = false;
 }
 
 /* ================= Explore: list, card, tour, game ================= */
 const app = $('#app'), listEl = $('#list'), cardEl = $('#card'), hudEl = $('#hud');
+const railEl = $('#rail'), sheetEl = $('#sheet'), peekMain = $('#peekMain'), viewBtn = $('#viewBtn'), hintEl = $('#hint');
+const TAP = TOUCH ? 'Tap' : 'Click', tap = TOUCH ? 'tap' : 'click';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[c]));
 const pressed = (sel, attr, val) => $$(sel).forEach(b => b.setAttribute(b.getAttribute('role') === 'tab' || b.closest('.tabs') ? 'aria-selected' : 'aria-pressed', String(b.dataset[attr] === val)));
 function finding(){ return S.find && !S.find.wait && S.find.i < S.find.ids.length; }
 
 function renderList(){
-  const parts = CELLS[S.cell].parts; let h = '';
+  const parts = CELLS[S.cell].parts; let h = finding() ? '<p class="clue"><b>Clue</b>' + esc(ORG[S.find.ids[S.find.i]].clue) + '</p>' : '';
   ['double', 'single', 'none', 'base'].forEach(cat => {
     const ids = parts.filter(id => ORG[id].cat === cat);
     h += '<div class="group"><h3><i class="dot d-' + cat + '"></i>' + CAT[cat].n + '</h3>';
@@ -1305,13 +1542,13 @@ function renderList(){
 function renderCard(){
   const c = CELLS[S.cell]; let h;
   if (finding()){
-    h = '<p class="eyebrow">Find it game</p><h2>Read the clue, then click the part</h2><p class="job">The clue is at the bottom of the 3D view.</p><p>Labels are hidden while you play. You get two tries for each clue, and only a first-try answer scores a point.</p>';
+    h = '<p class="eyebrow">Find it game</p><h2>Read the clue, then ' + tap + ' the part</h2><p class="job">The clue is next to the 3D view.</p><p>Labels are hidden while you play. You get two tries for each clue, and only a first-try answer scores a point. A boundary layer such as the membrane counts when you ' + tap + ' the edge of the cell.</p>';
   } else if (!S.sel){
     const count = cat => c.parts.filter(id => ORG[id].cat === cat).length;
     h = '<p class="eyebrow">' + c.kind + '</p><h2>' + c.n + '</h2><p class="say">' + c.size + '</p>' +
       '<p class="job">' + c.blurb + '</p><p>' + c.note + '</p>' +
       '<dl class="facts"><dt>Double membrane</dt><dd>' + count('double') + ' parts</dd><dt>Single membrane</dt><dd>' + count('single') + ' parts</dd><dt>No membrane</dt><dd>' + count('none') + ' parts</dd></dl>' +
-      '<div class="like"><b>How to explore</b><ul class="hints"><li><b>Drag</b> to turn the cell.</li><li><b>Scroll or pinch</b> to zoom.</li><li><b>Click a part</b> to read about it.</li><li>Use the <b>membrane filter</b> to sort the parts.</li></ul></div>';
+      '<div class="like"><b>How to explore</b><ul class="hints">' + howTo(c).map(x => '<li>' + x + '</li>').join('') + '</ul></div>';
   } else {
     const o = ORG[S.sel], parts = c.parts, i = parts.indexOf(S.sel);
     const where = Object.keys(CELLS).filter(k => CELLS[k].parts.indexOf(S.sel) >= 0).map(k => CELLS[k].n.toLowerCase()).join(', ');
@@ -1324,12 +1561,38 @@ function renderCard(){
       '<div class="card-nav"><button class="btn sm" data-org="' + parts[(i + parts.length - 1) % parts.length] + '">‹ Previous</button><button class="btn sm" data-org="' + parts[(i + 1) % parts.length] + '">Next ›</button></div>';
   }
   cardEl.innerHTML = h; cardEl.scrollTop = 0;
+  renderPeek();
 }
+function howTo(c){
+  const h = TOUCH
+    ? ['<b>Drag with one finger</b> to turn the cell.', '<b>Pinch</b> to zoom. <b>Drag with two fingers</b> to move the view.', '<b>Tap a part</b> to read about it.']
+    : ['<b>Drag</b> to turn the cell.', '<b>Scroll or pinch</b> to zoom. <b>Shift + drag</b> to move the view.', '<b>Click a part</b> to read about it.'];
+  if (c.parts.indexOf('wall') >= 0) h.push('<b>' + TAP + ' the edge again</b> to go from one boundary layer to the next.');
+  h.push('Use the <b>membrane filter</b> in the parts list to sort the parts.');
+  return h;
+}
+/* The short bar of the folded bottom panel on small screens: what is selected, in one line. */
+function renderPeek(){
+  let dot = '', t, s, tab = 'card';
+  if (finding()){ t = 'Parts list'; s = 'You can also answer from the list.'; tab = 'rail'; }
+  else if (S.sel){ const o = ORG[S.sel]; dot = '<i class="dot d-' + o.cat + '"></i>'; t = o.n; s = o.job; }
+  else { t = CELLS[S.cell].n; s = S.filter !== 'all' ? 'Showing the parts with ' + (S.filter === 'none' ? 'no membrane' : 'a ' + S.filter + ' membrane') + '.' : TAP + ' a part to see what it is.'; }
+  peekMain.dataset.sheet = tab;
+  peekMain.innerHTML = '<span class="peek-t">' + dot + '<b>' + esc(t) + '</b></span><span class="peek-s">' + esc(s) + '</span>';
+}
+/* Opens or folds the bottom panel. Only the small-screen layout shows a difference. */
+function setSheet(open, tab){
+  if (tab) setTab(tab);
+  S.sheet = !!open; app.dataset.sheet = open ? 'open' : 'closed'; if (open) hideHint();
+  $$('#peek button').forEach(b => b.setAttribute('aria-expanded', String(!!open)));
+  layout();
+}
+function setHud(on){ hudEl.hidden = !on; app.dataset.hud = on ? '1' : '0'; }
 function setTab(tab){ app.dataset.tab = tab; pressed('#tabs button', 'tab', tab); }
 function select(id){
   if (!id || !ORG[id] || CELLS[S.cell].parts.indexOf(id) < 0) id = null;
   S.sel = id; renderList(); renderCard(); applyVis(); focusOn(id);
-  if (id) setTab('card');
+  if (id){ setTab('card'); hideHint(); }
 }
 function onPick(id){ if (finding()) findAnswer(id); else select(id); }
 function setFilter(f){
@@ -1338,7 +1601,7 @@ function setFilter(f){
 }
 function setCell(id){
   if (!CELLS[id]) return;
-  S.cell = id; S.sel = null; S.hover = null; S.filter = 'all'; S.tour = -1; S.find = null; hudEl.hidden = true;
+  S.cell = id; S.sel = null; S.hover = null; S.filter = 'all'; S.tour = -1; S.find = null; setHud(false);
   pressed('#cellSwitch button', 'cell', id); pressed('#filters button', 'filter', 'all');
   showModel(id); renderList(); renderCard(); applyVis(); layout();
 }
@@ -1358,7 +1621,7 @@ function toggle(name, btn){
 
 function showTour(){
   const st = TOUR[S.tour], last = S.tour === TOUR.length - 1;
-  hudEl.hidden = false;
+  setHud(true);
   hudEl.innerHTML = '<p class="eyebrow">Follow a protein · step ' + (S.tour + 1) + ' of ' + TOUR.length + '</p><h3>' + st.t + '</h3><p>' + st.d + '</p>' +
     '<div class="card-nav"><button class="btn sm" data-act="tprev"' + (S.tour ? '' : ' disabled') + '>‹ Back</button><button class="btn sm primary" data-act="tnext">' + (last ? 'Finish' : 'Next ›') + '</button><button class="btn sm" data-act="tend">End tour</button></div>';
   select(st.id); layout();
@@ -1366,26 +1629,26 @@ function showTour(){
 function startTour(){
   S.find = null;
   if (S.cell === 'bacteria') setCell('animal');
-  setView('explore'); S.tour = 0; S.filter = 'all'; pressed('#filters button', 'filter', 'all');
+  setView('explore'); setSheet(false); S.tour = 0; S.filter = 'all'; pressed('#filters button', 'filter', 'all');
   const m = G.model; if (m && m.bead) m.bead.position.set(m.tour[0][0], m.tour[0][1], m.tour[0][2]);
   showTour();
 }
-function endTour(){ S.tour = -1; hudEl.hidden = true; select(null); layout(); }
+function endTour(){ S.tour = -1; setHud(false); select(null); layout(); }
 
 function showFind(msg, cls){
-  const f = S.find, n = f.ids.length; hudEl.hidden = false;
+  const f = S.find, n = f.ids.length; setHud(true);
   if (f.i >= n){
     hudEl.innerHTML = '<p class="eyebrow">Find it game</p><h3>' + f.score + ' of ' + n + ' found on the first try</h3><p>' + (f.score === n ? 'A perfect round.' : 'Play again to beat your score. The clues come in a new order every time.') + '</p>' +
       '<div class="card-nav"><button class="btn sm primary" data-act="find">Play again</button><button class="btn sm" data-act="fend">Close</button></div>';
   } else {
-    hudEl.innerHTML = '<p class="eyebrow">Find it game · clue ' + (f.i + 1) + ' of ' + n + ' · score ' + f.score + '</p><h3>' + esc(ORG[f.ids[f.i]].clue) + '</h3>' +
-      '<p class="' + (cls || '') + '">' + (msg || 'Click the right part in the 3D model or in the parts list.') + '</p>' +
+    hudEl.innerHTML = '<p class="eyebrow">Find it · clue ' + (f.i + 1) + ' of ' + n + ' · score ' + f.score + '</p><h3>' + esc(ORG[f.ids[f.i]].clue) + '</h3>' +
+      '<p class="' + (cls || '') + '">' + (msg || TAP + ' the right part in the 3D model or in the parts list.') + '</p>' +
       '<div class="card-nav">' + (f.wait ? '<button class="btn sm primary" data-act="fnext">Next clue ›</button>' : '<button class="btn sm" data-act="fshow">Show me</button>') + '<button class="btn sm" data-act="fend">Quit</button></div>';
   }
   layout();
 }
 function startFind(){
-  S.tour = -1; setView('explore');
+  S.tour = -1; setView('explore'); setSheet(false); hideHint();
   const ids = CELLS[S.cell].parts.filter(id => ORG[id].clue).map(id => [Math.random(), id]).sort((a, b) => a[0] - b[0]).map(x => x[1]).slice(0, 8);
   S.find = {ids, i:0, score:0, tries:0, wait:false}; S.filter = 'all'; pressed('#filters button', 'filter', 'all');
   select(null); showFind();
@@ -1394,7 +1657,7 @@ function findAnswer(id){
   const f = S.find, target = f.ids[f.i]; if (!id) return;
   if (id === target){ if (!f.tries) f.score++; f.wait = true; select(id); showFind('Correct: ' + ORG[target].n + '.', 'fb-ok'); }
   else if (++f.tries >= 2){ f.wait = true; select(target); showFind('The answer is ' + ORG[target].n + '. It is selected in the model now.', 'fb-bad'); }
-  else showFind('You clicked: ' + ORG[id].n + '. Try one more time.', 'fb-bad');
+  else showFind('You ' + (TOUCH ? 'tapped' : 'clicked') + ': ' + ORG[id].n + '. Try one more time.', 'fb-bad');
 }
 function act(name){
   const f = S.find;
@@ -1405,7 +1668,8 @@ function act(name){
   else if (name === 'tend') endTour();
   else if (name === 'fnext' && f){ f.i++; f.tries = 0; f.wait = false; select(null); showFind(); }
   else if (name === 'fshow' && f){ f.tries = 1; findAnswer('?'); }
-  else if (name === 'fend'){ S.find = null; hudEl.hidden = true; select(null); layout(); }
+  else if (name === 'fend'){ S.find = null; setHud(false); select(null); layout(); }
+  else if (name === 'home') select(null);
 }
 
 /* ================= Lessons: figures ================= */
@@ -1659,18 +1923,25 @@ function initQuiz(){
 
 /* ================= Wiring and start ================= */
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-org],[data-cell],[data-filter],[data-view],[data-tog],[data-act],[data-tab],[data-go],[data-show],[data-ton],[data-sav],[data-mit],[data-q]');
+  const t = e.target.closest('[data-org],[data-cell],[data-filter],[data-view],[data-tog],[data-act],[data-tab],[data-sheet],[data-go],[data-show],[data-ton],[data-sav],[data-mit],[data-q]');
   if (!t || t.disabled) return;
   const d = t.dataset;
-  if ('org' in d){ if (t.classList.contains('lab') || t.classList.contains('item')) onPick(d.org || null); else select(d.org || null); }
+  if ('org' in d){
+    /* A tap on a label is handled by the pointer code of the 3D view. The click that may follow it is dropped here. */
+    if (t.classList.contains('lab') && performance.now() - (G.labAt || 0) < 600) return;
+    if (t.classList.contains('lab') || t.classList.contains('item')) onPick(d.org || null); else select(d.org || null);
+    /* On a small screen, a choice from the list folds the panel so the part can be seen in the model. */
+    if (t.classList.contains('item') && G.ok && G.mode === 'sheet') setSheet(false);
+  }
   else if (d.cell) setCell(d.cell);
   else if (d.filter) setFilter(d.filter);
   else if (d.view) setView(d.view);
   else if (d.tog) toggle(d.tog, t);
   else if (d.act) act(d.act);
   else if (d.tab) setTab(d.tab);
+  else if (d.sheet){ if (d.sheet === 'close') setSheet(false); else setSheet(true, d.sheet); }
   else if (d.go){ const el = document.getElementById(d.go); if (el) el.scrollIntoView({behavior:reduce ? 'auto' : 'smooth', block:'start'}); }
-  else if (d.show){ setView('explore'); if (S.cell === 'bacteria' && d.show !== 'none') setCell('animal'); S.tour = -1; S.find = null; hudEl.hidden = true; setFilter(d.show); layout(); }
+  else if (d.show){ setView('explore'); if (S.cell === 'bacteria' && d.show !== 'none') setCell('animal'); S.tour = -1; S.find = null; setHud(false); setSheet(false); setFilter(d.show); layout(); }
   else if (d.ton) setTon(d.ton);
   else if (d.sav) setSav(d.sav.split(',').map(Number));
   else if (d.mit) setMit(+d.mit);
@@ -1679,13 +1950,27 @@ document.addEventListener('click', e => {
 function boot(){
   G.ok = initGL();
   if (!G.ok){ $('#nogl').hidden = false; canvas.hidden = true; }
-  if (window.innerWidth < 1080){ S.labels = false; $('[data-tog="labels"]').setAttribute('aria-pressed', 'false'); }
+  if (mqCompact.matches){ S.labels = false; $('[data-tog="labels"]').setAttribute('aria-pressed', 'false'); }
+  if (!TOUCH) hintEl.textContent = 'Drag to turn · Scroll to zoom · Click a part';
+  if (!G.ok){ S.sheet = true; app.dataset.sheet = 'open'; hideHint(); }
+  setTimeout(hideHint, 8000);
   if (reduce){ S.spin = false; $('[data-tog="spin"]').setAttribute('aria-pressed', 'false'); }
   showModel('animal'); renderList(); renderCard();
   setView((location.hash || '').slice(1) || 'explore', true);
   const themed = () => { applyTheme(); if (G.ok && !G.running && G.model) renderer.render(scene, camera); };
   window.addEventListener('hashchange', () => { const v = location.hash.slice(1); if (v && v !== S.view) setView(v, true); });
   window.addEventListener('resize', layout);
+  [mqCompact, mqSide].forEach(q => { if (q.addEventListener) q.addEventListener('change', layout); else if (q.addListener) q.addListener(layout); });
+  /* A swipe up on the short bar opens the bottom panel, a swipe down on its header folds it. */
+  let swipeY = null;
+  sheetEl.addEventListener('pointerdown', e => { swipeY = e.target.closest('.peek,.sheet-bar') ? e.clientY : null; });
+  sheetEl.addEventListener('pointercancel', () => { swipeY = null; });
+  sheetEl.addEventListener('pointerup', e => {
+    if (swipeY == null) return;
+    const dy = e.clientY - swipeY; swipeY = null;
+    if (G.mode !== 'sheet') return;
+    if (dy < -24 && !S.sheet) setSheet(true); else if (dy > 24 && S.sheet) setSheet(false);
+  });
   if (window.ResizeObserver) new ResizeObserver(() => layout()).observe(stageEl);
   if (window.matchMedia){ const mq = matchMedia('(prefers-color-scheme: dark)'); if (mq.addEventListener) mq.addEventListener('change', themed); else if (mq.addListener) mq.addListener(themed); }
   new MutationObserver(themed).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
